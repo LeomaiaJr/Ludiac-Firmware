@@ -3,11 +3,14 @@
 #define SSID "PISCO"
 #define PASSWD "6tsa-7cnpq-53js"
 #define SOCK_PORT 123
+#define MAX_CLIENTS 2
 
 WiFiServer sockServer(SOCK_PORT);
 
 int leftSensorValue;
 int rightSensorValue;
+
+WiFiClient *clients[MAX_CLIENTS] = { NULL };
 
 void setup(){
     pinMode(D0, OUTPUT);
@@ -25,28 +28,33 @@ void setup(){
     Serial.print("IP: ");
     Serial.println(WiFi.localIP());
 
-    sockServer.begin(); //abre a porta 123
+    sockServer.begin();
 }
 
 void loop(){
     digitalWrite(D0, HIGH);
-    WiFiClient client = sockServer.available();
-    if (client){
-        while (client.connected()){
-            String leftStr = "LEFT";
-            String rightStr = ";RIGHT";
-            leftSensorValue = !digitalRead(D7);
-            rightSensorValue = digitalRead(D1);
-            Serial.println(leftStr + leftSensorValue + rightStr + rightSensorValue);
-            client.print(leftStr + leftSensorValue + rightStr + rightSensorValue);
-            delay(500);
-            while (client.available() > 0){
-                uint8_t value = client.read();
-                Serial.write(value);
-                client.print("Hello from ESP32!");
-            }
-            delay(10);
+    WiFiClient newClient = sockServer.available();
+    if (newClient){
+        Serial.println("new client");
+        for (int i=0 ; i<MAX_CLIENTS ; ++i) {
+          if (NULL == clients[i]) {
+              clients[i] = new WiFiClient(newClient);
+              break;
+          }
         }
-        client.stop(); //acabou a leitura dos dados. Finaliza o client.
     }
+    String leftStr = "LEFT";
+    String rightStr = ";RIGHT";
+    leftSensorValue = !digitalRead(D7);
+    rightSensorValue = digitalRead(D1);
+    Serial.println(leftStr + leftSensorValue + rightStr + rightSensorValue);
+    
+    for (int j=0 ; j<MAX_CLIENTS ; ++j) {
+      if (NULL != clients[j]) {
+        if(clients[j]->connected()){
+          clients[j]->print(leftStr + leftSensorValue + rightStr + rightSensorValue);
+        }
+      }
+    }
+    delay(400);
 }
