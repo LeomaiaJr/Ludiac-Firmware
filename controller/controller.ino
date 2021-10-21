@@ -6,8 +6,15 @@
 
 WiFiServer sockServer(SOCK_PORT);
 
+int leftSensorValue;
+int rightSensorValue;
+
 void setup(){
+    pinMode(D0, OUTPUT);
+    pinMode(D7, INPUT);
+    pinMode(D1, INPUT);
     Serial.begin(9600);
+    
     delay(1000);
     WiFi.begin(SSID,PASSWD);
     while (WiFi.status() != WL_CONNECTED){
@@ -22,9 +29,17 @@ void setup(){
 }
 
 void loop(){
+    digitalWrite(D0, HIGH);
     WiFiClient client = sockServer.available();
     if (client){
         while (client.connected()){
+            String leftStr = "LEFT";
+            String rightStr = ";RIGHT";
+            leftSensorValue = !digitalRead(D7);
+            rightSensorValue = digitalRead(D1);
+            Serial.println(leftStr + leftSensorValue + rightStr + rightSensorValue);
+            client.print(leftStr + leftSensorValue + rightStr + rightSensorValue);
+            delay(500);
             while (client.available() > 0){
                 uint8_t value = client.read();
                 Serial.write(value);
